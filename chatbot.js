@@ -146,7 +146,7 @@
   closeBtn.addEventListener('click', closeModal);
   overlay.addEventListener('click', closeModal);
 
-  // Xử lý gửi tin nhắn Google Gemini API trực tiếp
+  // Xử lý gửi tin nhắn với header xác thực Bearer token cho định dạng khóa mới
   let historyMessages = [];
 
   async function handleSend() {
@@ -161,10 +161,11 @@
     sendBtn.textContent = '...';
 
     try {
-      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AQ.Ab8RN6Kwn91yshinHBO0-m8dvjD0xNvRoeKB2mpLlhh8ABIlMg', {
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer AQ.Ab8RN6Kwn91yshinHBO0-m8dvjD0xNvRoeKB2mpLlhh8ABIlMg'
         },
         body: JSON.stringify({
           contents: historyMessages
@@ -180,7 +181,7 @@
       
       historyMessages.push({ role: 'model', parts: [{ text: reply }] });
     } catch (err) {
-      historyMessages.pop(); // Xóa tin nhắn user vừa thêm nếu lỗi để nhập lại
+      historyMessages.pop(); 
       historyMessages.push({ role: 'model', parts: [{ text: `[Lỗi API]: ${err.message}` }] });
     } finally {
       sendBtn.disabled = false;
