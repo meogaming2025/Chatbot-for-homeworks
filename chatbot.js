@@ -73,7 +73,7 @@
     
     <div id="chatbot-sheet">
       <div class="cb-header">
-        <span class="cb-title">OpenRouter AI Chat</span>
+        <span class="cb-title">OpenRouter AI Chat (GPT-4o-mini)</span>
         <button class="cb-close" id="cb-close-btn">&times;</button>
       </div>
       <div class="cb-body">
@@ -168,16 +168,20 @@
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'openai/gpt-6-astra',
+          model: 'openai/gpt-4o-mini',
           messages: historyMessages
         })
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
       const reply = data.choices[0]?.message?.content || 'Không nhận được phản hồi.';
       historyMessages.push({ role: 'assistant', content: reply });
     } catch (err) {
-      historyMessages.push({ role: 'assistant', content: '[Lỗi kết nối API]' });
+      historyMessages.push({ role: 'assistant', content: `[Lỗi API]: ${err.message}` });
     } finally {
       sendBtn.disabled = false;
       sendBtn.textContent = 'Gửi';
