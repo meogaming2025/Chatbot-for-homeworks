@@ -73,7 +73,7 @@
     
     <div id="chatbot-sheet">
       <div class="cb-header">
-        <span class="cb-title">OpenRouter AI Chat (Gemini Flash)</span>
+        <span class="cb-title">Google Gemini AI Chat</span>
         <button class="cb-close" id="cb-close-btn">&times;</button>
       </div>
       <div class="cb-body">
@@ -146,14 +146,14 @@
   closeBtn.addEventListener('click', closeModal);
   overlay.addEventListener('click', closeModal);
 
-  // Xử lý gửi tin nhắn OpenRouter API
+  // Xử lý gửi tin nhắn Google Gemini API trực tiếp
   let historyMessages = [];
 
   async function handleSend() {
     const text = inputField.value.trim();
     if (!text) return;
 
-    historyMessages.push({ role: 'user', content: text });
+    historyMessages.push({ role: 'user', parts: [{ text: text }] });
     inputField.value = '';
     renderChat();
 
@@ -161,15 +161,13 @@
     sendBtn.textContent = '...';
 
     try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AQ.Ab8RN6K8WuJLhWCLunsozWDhiTfGBUSGbc-Dkb4Cf0uqvjbFAw', {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer Sk-or-v1-47a1b6913fb73dd02fa582b25d54f229ac8bfb4f8a592c4f638b2a7198611eb9',
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'google/gemini-flash-1.5',
-          messages: historyMessages
+          contents: historyMessages
         })
       });
 
@@ -178,10 +176,12 @@
       }
 
       const data = await response.json();
-      const reply = data.choices[0]?.message?.content || 'Không nhận được phản hồi.';
-      historyMessages.push({ role: 'assistant', content: reply });
+      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Không nhận được phản hồi.';
+      
+      historyMessages.push({ role: 'model', parts: [{ text: reply }] });
     } catch (err) {
-      historyMessages.push({ role: 'assistant', content: `[Lỗi API]: ${err.message}` });
+      historyMessages.pop(); // Xóa tin nhắn user vừa thêm nếu lỗi để nhập lại
+      historyMessages.push({ role: 'model', parts: [{ text: `[Lỗi API]: ${err.message}` }] });
     } finally {
       sendBtn.disabled = false;
       sendBtn.textContent = 'Gửi';
@@ -193,8 +193,10 @@
     msgContainer.innerHTML = '';
     historyMessages.forEach(m => {
       const div = document.createElement('div');
-      div.className = `cb-msg ${m.role}`;
-      div.textContent = m.content;
+      // Chuyển đổi role hiển thị (user -> user, model/assistant -> assistant)
+      const roleClass = m.role === 'user' ? 'user' : 'assistant';
+      div.className = `cb-msg ${roleClass}`;
+      div.textContent = m.parts[0].text;
       msgContainer.appendChild(div);
     });
     msgContainer.scrollTop = msgContainer.scrollHeight;
