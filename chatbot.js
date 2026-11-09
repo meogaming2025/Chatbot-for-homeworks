@@ -73,7 +73,7 @@
     
     <div id="chatbot-sheet">
       <div class="cb-header">
-        <span class="cb-title">OpenRouter AI Chat (GPT-OSS-120B)</span>
+        <span class="cb-title">OpenRouter AI Chat (Gemini Flash)</span>
         <button class="cb-close" id="cb-close-btn">&times;</button>
       </div>
       <div class="cb-body">
@@ -168,7 +168,7 @@
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'openai/gpt-oss-120b',
+          model: 'google/gemini-flash-1.5',
           messages: historyMessages
         })
       });
