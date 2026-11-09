@@ -161,7 +161,7 @@
     sendBtn.textContent = '...';
 
     try {
-      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AQ.Ab8RN6K8WuJLhWCLunsozWDhiTfGBUSGbc-Dkb4Cf0uqvjbFAw', {
+      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AQ.Ab8RN6Kwn91yshinHBO0-m8dvjD0xNvRoeKB2mpLlhh8ABIlMg', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -193,7 +193,6 @@
     msgContainer.innerHTML = '';
     historyMessages.forEach(m => {
       const div = document.createElement('div');
-      // Chuyển đổi role hiển thị (user -> user, model/assistant -> assistant)
       const roleClass = m.role === 'user' ? 'user' : 'assistant';
       div.className = `cb-msg ${roleClass}`;
       div.textContent = m.parts[0].text;
