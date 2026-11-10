@@ -59,13 +59,13 @@
     
     <div id="chatbot-sheet">
       <div class="cb-header">
-        <span class="cb-title">DeepSeek V4.1 Flash</span>
+        <span class="cb-title">AI Study Assistant</span>
         <button class="cb-close" id="cb-close-btn">&times;</button>
       </div>
       <div class="cb-body">
         <div class="cb-messages" id="cb-messages"></div>
         <div class="cb-input-area">
-          <input type="text" id="cb-input" placeholder="Nhập tin nhắn..." autocomplete="off">
+          <input type="text" id="cb-input" placeholder="Nhập câu hỏi bài tập..." autocomplete="off">
           <button class="cb-send-btn" id="cb-send">Gửi</button>
         </div>
       </div>
@@ -144,17 +144,16 @@
     sendBtn.textContent = '...';
 
     try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      // Sử dụng API công khai qua dịch vụ AI miễn phí không yêu cầu khóa bảo mật rườm rà
+      const response = await fetch('https://text.pollinations.ai/', {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer Sk-or-v1-47a1b6913fb73dd02fa582b25d54f229ac8bfb4f8a592c4f638b2a7198611eb9',
-          'Content-Type': 'application/json',
-          'HTTP-Referer': window.location.href,
-          'X-Title': 'Homework Chatbot'
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'deepseek/deepseek-v4.1-flash-1017',
-          messages: historyMessages
+          messages: historyMessages,
+          model: 'openai',
+          jsonMode: false
         })
       });
 
@@ -162,11 +161,10 @@
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
-      const reply = data.choices[0]?.message?.content || 'Không nhận được phản hồi.';
+      const reply = await response.text();
       historyMessages.push({ role: 'assistant', content: reply });
     } catch (err) {
-      historyMessages.push({ role: 'assistant', content: `[Lỗi API]: ${err.message}` });
+      historyMessages.push({ role: 'assistant', content: `[Lỗi kết nối]: ${err.message}` });
     } finally {
       sendBtn.disabled = false;
       sendBtn.textContent = 'Gửi';
