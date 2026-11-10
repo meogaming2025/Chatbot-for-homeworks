@@ -1,29 +1,15 @@
 (function() {
   if (document.getElementById('chatbot-floating-btn')) return;
 
-  // Tạo giao diện HTML/CSS
   const container = document.createElement('div');
   container.innerHTML = `
     <style>
       #chatbot-floating-btn {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        background-color: #2a2a2a;
-        border: 3px solid #00e5ff;
-        box-shadow: 0 4px 20px rgba(0, 229, 255, 0.4);
-        cursor: grab;
-        z-index: 999999;
-        user-select: none;
-        touch-action: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        overflow: hidden;
+        position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        width: 70px; height: 70px; border-radius: 50%; background-color: #2a2a2a;
+        border: 3px solid #00e5ff; box-shadow: 0 4px 20px rgba(0, 229, 255, 0.4);
+        cursor: grab; z-index: 999999; user-select: none; touch-action: none;
+        display: flex; align-items: center; justify-content: center; overflow: hidden;
       }
       #chatbot-floating-btn:active { cursor: grabbing; }
       #chatbot-floating-btn img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
@@ -73,7 +59,7 @@
     
     <div id="chatbot-sheet">
       <div class="cb-header">
-        <span class="cb-title">Google Gemini AI Chat</span>
+        <span class="cb-title">DeepSeek V4.1 Flash</span>
         <button class="cb-close" id="cb-close-btn">&times;</button>
       </div>
       <div class="cb-body">
@@ -87,7 +73,6 @@
   `;
   document.body.appendChild(container);
 
-  // Logic Kéo thả nút nổi
   const floatBtn = document.getElementById('chatbot-floating-btn');
   const overlay = document.getElementById('chatbot-overlay');
   const sheet = document.getElementById('chatbot-sheet');
@@ -131,7 +116,6 @@
   document.addEventListener('touchmove', onMove, { passive: true });
   document.addEventListener('touchend', onUp);
 
-  // Mở/Đóng giao diện Modal
   floatBtn.addEventListener('click', () => {
     if (!hasDragged) {
       overlay.classList.add('active');
@@ -146,14 +130,13 @@
   closeBtn.addEventListener('click', closeModal);
   overlay.addEventListener('click', closeModal);
 
-  // Xử lý gửi tin nhắn với header xác thực Bearer token cho định dạng khóa mới
   let historyMessages = [];
 
   async function handleSend() {
     const text = inputField.value.trim();
     if (!text) return;
 
-    historyMessages.push({ role: 'user', parts: [{ text: text }] });
+    historyMessages.push({ role: 'user', content: text });
     inputField.value = '';
     renderChat();
 
@@ -161,14 +144,17 @@
     sendBtn.textContent = '...';
 
     try {
-      const response = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
+          'Authorization': 'Bearer Sk-or-v1-47a1b6913fb73dd02fa582b25d54f229ac8bfb4f8a592c4f638b2a7198611eb9',
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer AQ.Ab8RN6Kwn91yshinHBO0-m8dvjD0xNvRoeKB2mpLlhh8ABIlMg'
+          'HTTP-Referer': window.location.href,
+          'X-Title': 'Homework Chatbot'
         },
         body: JSON.stringify({
-          contents: historyMessages
+          model: 'deepseek/deepseek-v4.1-flash-1017',
+          messages: historyMessages
         })
       });
 
@@ -177,12 +163,10 @@
       }
 
       const data = await response.json();
-      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Không nhận được phản hồi.';
-      
-      historyMessages.push({ role: 'model', parts: [{ text: reply }] });
+      const reply = data.choices[0]?.message?.content || 'Không nhận được phản hồi.';
+      historyMessages.push({ role: 'assistant', content: reply });
     } catch (err) {
-      historyMessages.pop(); 
-      historyMessages.push({ role: 'model', parts: [{ text: `[Lỗi API]: ${err.message}` }] });
+      historyMessages.push({ role: 'assistant', content: `[Lỗi API]: ${err.message}` });
     } finally {
       sendBtn.disabled = false;
       sendBtn.textContent = 'Gửi';
@@ -194,9 +178,8 @@
     msgContainer.innerHTML = '';
     historyMessages.forEach(m => {
       const div = document.createElement('div');
-      const roleClass = m.role === 'user' ? 'user' : 'assistant';
-      div.className = `cb-msg ${roleClass}`;
-      div.textContent = m.parts[0].text;
+      div.className = `cb-msg ${m.role}`;
+      div.textContent = m.content;
       msgContainer.appendChild(div);
     });
     msgContainer.scrollTop = msgContainer.scrollHeight;
