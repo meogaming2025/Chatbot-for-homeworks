@@ -12,14 +12,7 @@
         display: flex; align-items: center; justify-content: center; overflow: hidden;
       }
       #chatbot-floating-btn:active { cursor: grabbing; }
-      
-      /* Icon Robot SVG thay thế ảnh để không bao giờ bị lỗi load */
-      #chatbot-floating-btn svg {
-        width: 34px;
-        height: 34px;
-        fill: #00e5ff;
-        pointer-events: none;
-      }
+      #chatbot-floating-btn svg { width: 34px; height: 34px; fill: #00e5ff; pointer-events: none; }
 
       #chatbot-overlay {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -65,7 +58,7 @@
 
     <div id="chatbot-floating-btn" title="Mở AI Study Assistant">
       <svg viewBox="0 0 24 24">
-        <path d="M12,2A2,2 0 0,1 14,4C14,4.74 13.6,5.39 13,5.73V7H15A térmica... Let's use clean standard bot SVG path ... M20,10V8H18V10H20M6,10V8H4V10H6M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M12,4A8,8 0 0,1 20,12A8,8 0 0,1 12,20A8,8 0 0,1 4,12A8,8 0 0,1 12,4M12,6A6,6 0 0,0 6,12C6,15.31 8.69,18 12,18C15.31,18 18,15.31 18,12C18,8.69 15.31,6 12,6M10,10.5C10,11.33 9.33,12 8.5,12C7.67,12 7,11.33 7,10.5C7,9.67 7.67,9 8.5,9C9.33,9 10,9.67 10,10.5M17,10.5C17,11.33 16.33,12 15.5,12C14.67,12 14,11.33 14,10.5C14,9.67 14.67,9 15.5,9C16.33,9 17,9.67 17,10.5M12,13.5C10.67,13.5 9.5,14.33 9.08,15.5H14.92C14.5,14.33 13.33,13.5 12,13.5Z"/>
+        <path d="M12,2A2,2 0 0,1 14,4C14,4.74 13.6,5.39 13,5.73V7H15A2,2 0 0,1 17,9V10H19A2,2 0 0,1 21,12V19A2,2 0 0,1 19,21H5A2,2 0 0,1 3,19V12A2,2 0 0,1 5,10H7V9A2,2 0 0,1 9,7H11V5.73C10.4,5.39 10,4.74 10,4A2,2 0 0,1 12,2M7,12V19H17V12H7M9,9V10H15V9H9Z"/>
       </svg>
     </div>
 
@@ -155,9 +148,30 @@
     if (file) {
       const reader = new FileReader();
       reader.onload = function(uploadEvent) {
-        selectedImageBase64 = uploadEvent.target.result;
-        inputField.placeholder = "Đã chọn ảnh! Nhấn gửi để hỏi AI...";
-        uploadBtn.style.borderColor = "#00e5ff";
+        // Nén ảnh nhỏ lại trước khi gửi để chống lỗi 400
+        const img = new Image();
+        img.src = uploadEvent.target.result;
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+          } else {
+            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          selectedImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
+
+          inputField.placeholder = "Đã nén và chọn ảnh! Nhấn gửi...";
+          uploadBtn.style.borderColor = "#00e5ff";
+        };
       };
       reader.readAsDataURL(file);
     }
@@ -169,15 +183,15 @@
     const text = inputField.value.trim();
     if (!text && !selectedImageBase64) return;
 
-    let messageContent = text;
+    let userPrompt = text || "Hãy giải bài tập trong ảnh này giúp tôi và chọn đáp án đúng:";
     let displayHtml = text;
 
     if (selectedImageBase64) {
-      messageContent = `${text}\n[Image attached: ${selectedImageBase64}]`;
       displayHtml = `${text ? text + '<br>' : ''}<img src="${selectedImageBase64}" alt="Uploaded image">`;
+      userPrompt = `${userPrompt} [IMAGE:${selectedImageBase64}]`;
     }
 
-    historyMessages.push({ role: 'user', content: messageContent });
+    historyMessages.push({ role: 'user', content: userPrompt });
     
     inputField.value = '';
     inputField.placeholder = "Nhập câu hỏi hoặc gửi ảnh...";
@@ -228,8 +242,8 @@
     historyMessages.forEach(m => {
       const div = document.createElement('div');
       div.className = `cb-msg ${m.role}`;
-      if (m.content.includes('[Image attached:')) {
-        const parts = m.content.split('[Image attached:');
+      if (m.content.includes('[IMAGE:')) {
+        const parts = m.content.split('[IMAGE:');
         const textPart = parts[0];
         const imgPart = parts[1].replace(']', '').trim();
         div.innerHTML = `${textPart ? textPart + '<br>' : ''}<img src="${imgPart}" alt="Image">`;
