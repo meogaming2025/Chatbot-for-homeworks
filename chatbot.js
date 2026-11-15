@@ -66,7 +66,7 @@
     
     <div id="chatbot-sheet">
       <div class="cb-header">
-        <span class="cb-title">AI Study Assistant (Vision)</span>
+        <span class="cb-title">AI Study Assistant</span>
         <button class="cb-close" id="cb-close-btn">&times;</button>
       </div>
       <div class="cb-body">
@@ -152,8 +152,8 @@
         img.src = uploadEvent.target.result;
         img.onload = function() {
           const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 900;
-          const MAX_HEIGHT = 900;
+          const MAX_WIDTH = 800;
+          const MAX_HEIGHT = 800;
           let width = img.width;
           let height = img.height;
 
@@ -166,9 +166,9 @@
           canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
-          selectedImageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+          selectedImageBase64 = canvas.toDataURL('image/jpeg', 0.7);
 
-          inputField.placeholder = "Đã đính kèm ảnh! Nhấn gửi...";
+          inputField.placeholder = "Đã chọn ảnh! Nhấn gửi...";
           uploadBtn.style.borderColor = "#00e5ff";
         };
       };
@@ -182,56 +182,45 @@
     const text = inputField.value.trim();
     if (!text && !selectedImageBase64) return;
 
-    let userContent = [];
+    let userPrompt = text || "Hãy giải bài tập trong ảnh này giúp tôi và chọn đáp án đúng:";
     let displayHtml = text;
 
     if (selectedImageBase64) {
-      displayHtml = `${text ? text + '<br>' : ''}<img src="${selectedImageBase64}" alt="Image">`;
-      userContent = [
-        { type: "text", text: text || "Hãy đọc kỹ đề bài trong hình này, giải chi tiết và chọn đáp án đúng giúp tôi:" },
-        { type: "image_url", image_url: { url: selectedImageBase64 } }
-      ];
-    } else {
-      userContent = text;
+      displayHtml = `${text ? text + '<br>' : ''}<img src="${selectedImageBase64}" alt="Uploaded image">`;
+      userPrompt = `${userPrompt} [IMAGE:${selectedImageBase64}]`;
     }
 
-    historyMessages.push({ role: 'user', content: userContent });
-
+    historyMessages.push({ role: 'user', content: userPrompt });
+    
     inputField.value = '';
     inputField.placeholder = "Nhập câu hỏi hoặc gửi ảnh...";
     selectedImageBase64 = null;
     uploadBtn.style.borderColor = "#444";
     fileInput.value = '';
-
+    
     renderChatCustom(displayHtml, 'user');
 
     sendBtn.disabled = true;
     sendBtn.textContent = '...';
 
     try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const response = await fetch('https://text.pollinations.ai/', {
         method: 'POST',
-        headers: {
-          'Authorization': 'Bearer Sk-or-v1-47a1b6913fb73dd02fa582b25d54f229ac8bfb4f8a592c4f638b2a7198611eb9',
-          'Content-Type': 'application/json',
-          'HTTP-Referer': window.location.href,
-          'X-Title': 'Study Assistant'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: historyMessages
+          messages: historyMessages.map(m => ({ role: m.role, content: m.content })),
+          model: 'openai',
+          jsonMode: false
         })
       });
 
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-      const data = await response.json();
-      const reply = data.choices[0]?.message?.content || 'Không nhận được phản hồi.';
-      
+      const reply = await response.text();
       historyMessages.push({ role: 'assistant', content: reply });
       renderChat();
     } catch (err) {
-      historyMessages.push({ role: 'assistant', content: `[Lỗi API]: ${err.message}` });
+      historyMessages.push({ role: 'assistant', content: `[Lỗi kết nối]: ${err.message}` });
       renderChat();
     } finally {
       sendBtn.disabled = false;
@@ -252,14 +241,11 @@
     historyMessages.forEach(m => {
       const div = document.createElement('div');
       div.className = `cb-msg ${m.role}`;
-      if (Array.isArray(m.content)) {
-        let textPart = '';
-        let imgUrl = '';
-        m.content.forEach(c => {
-          if (c.type === 'text') textPart = c.text;
-          if (c.type === 'image_url') imgUrl = c.image_url.url;
-        });
-        div.innerHTML = `${textPart ? textPart + '<br>' : ''}${imgUrl ? '<img src="'+imgUrl+'" alt="Image">' : ''}`;
+      if (m.content.includes('[IMAGE:')) {
+        const parts = m.content.split('[IMAGE:');
+        const textPart = parts[0];
+        const imgPart = parts[1].replace(']', '').trim();
+        div.innerHTML = `${textPart ? textPart + '<br>' : ''}<img src="${imgPart}" alt="Image">`;
       } else {
         div.textContent = m.content;
       }
